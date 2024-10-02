@@ -1,0 +1,30 @@
+---
+
+- name: Include tasks for Debian
+  ansible.builtin.include_tasks:
+    file: Debian/Debian.yml
+  when:
+    - ansible_os_family == "Debian"
+    - ansible_facts.distribution == "Debian"
+    - not compile_from_source
+
+- name: Include tasks for Ubuntu
+  ansible.builtin.include_tasks:
+    file: Debian/Ubuntu.yml
+  when:
+    - ansible_os_family == "Debian"
+    - ansible_facts.distribution == "Ubuntu"
+    - not compile_from_source
+
+- name: Include tasks for Rocky
+  ansible.builtin.include_tasks:
+    file: RHEL/Rocky.yml
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_facts.distribution == "Rocky"
+    - not compile_from_source
+
+- name: Include tasks for compile from source
+  ansible.builtin.include_tasks:
+    file: General/compile_from_source.yml
+  when: compile_from_source

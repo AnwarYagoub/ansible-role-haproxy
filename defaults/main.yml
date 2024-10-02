@@ -1,0 +1,23 @@
+---
+
+compile_from_source: false
+
+haproxy_version: "3.0"
+haproxy_patch_version: "5"
+
+haproxy_download_url: "http://www.haproxy.org/download/{{ haproxy_version }}/src/haproxy-{{ haproxy_version }}.{{ haproxy_patch_version }}.tar.gz"
+haproxy_download_dest: "/root/haproxy-{{ haproxy_version }}.{{ haproxy_patch_version }}.tar.gz"
+
+haproxy_checksum_alg: "sha256"
+haproxy_checksum_value: "ae38221e85aeba038a725efbef5bfe5e76671ba7959e5eb74c39fd079e5d002e"
+haproxy_checksum: "{{ haproxy_checksum_alg }}:{{ haproxy_checksum_value }}"
+
+haproxy_unarchive_dest: "/root"
+haproxy_source_code_path: "{{ haproxy_unarchive_dest }}/haproxy-{{ haproxy_version }}.{{ haproxy_patch_version }}"
+
+haproxy_user: haproxy
+haproxy_group: haproxy
+haproxy_user_home_dir: /var/lib/haproxy
+
+haproxy_conf_dir: /etc/haproxy
+haproxy_runtime_dir: /run/haproxy

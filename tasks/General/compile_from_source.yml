@@ -1,0 +1,116 @@
+---
+
+- name: Check if HAProxy is already available
+  ansible.builtin.command:
+    cmd: which haproxy
+  register: haproxy_executable_check
+  ignore_errors: true
+  changed_when: false
+
+- name: End execution if HAProxy already exists
+  ansible.builtin.meta: end_play
+  when: haproxy_executable_check.rc == 0
+
+- name: Install required packages on RedHat based systems
+  ansible.builtin.dnf:
+    name:
+      - '@Development tools'
+      - pcre-devel
+      - openssl-devel
+      - systemd-devel
+      - zlib-devel
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Install required packages on Debian based systems
+  when:
+    - ansible_os_family == "Debian"
+  block:
+    - name: Install required packages on Debian based systems | Update APT cache
+      ansible.builtin.apt:
+        update_cache: true
+    - name: Install required packages on Debian based systems | Install packages
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - libpcre3-dev
+          - libssl-dev
+          - libsystemd-dev
+          - libz-dev
+        state: present
+
+- name: Download HAProxy source code archive
+  ansible.builtin.get_url:
+    url: "{{ haproxy_download_url }}"
+    checksum: "{{ haproxy_checksum }}"
+    dest: "{{ haproxy_download_dest }}"
+    mode: "0644"
+
+- name: Extract HAProxy source code archive
+  ansible.builtin.unarchive:
+    src: "{{ haproxy_download_dest }}"
+    dest: "{{ haproxy_unarchive_dest }}"
+    remote_src: true
+
+- name: Compile HAProxy
+  community.general.make:
+    chdir: "{{ haproxy_source_code_path }}"
+    params:
+      TARGET: linux-glibc
+      USE_OPENSSL: 1
+      USE_PCRE: 1
+      USE_ZLIB: 1
+      USE_SYSTEMD: 1
+
+- name: Compile HAProxy
+  community.general.make:
+    chdir: "{{ haproxy_source_code_path }}"
+    target: install
+
+- name: Create HAProxy user
+  ansible.builtin.user:
+    name: "{{ haproxy_user }}"
+    home: "{{ haproxy_user_home_dir }}"
+    create_home: true
+    shell: /usr/sbin/nologin
+    state: present
+
+- name: Create required HAProxy directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+    state: directory
+  loop:
+    - path: "{{ haproxy_conf_dir }}"
+      owner: root
+      group: root
+      mode: "0755"
+    - path: "{{ haproxy_runtime_dir }}"
+      owner: "{{ haproxy_user }}"
+      group: "{{ haproxy_group }}"
+      mode: "2770"
+
+- name: Create HAProxy configuration file
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: "{{ haproxy_conf_dir }}/haproxy.cfg"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create a systemd service for HAProxy
+  ansible.builtin.template:
+    src: haproxy.service.j2
+    dest: /etc/systemd/system/haproxy.service
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Start HAProxy service
+  ansible.builtin.systemd_service:
+    name: haproxy
+    state: started
+    enabled: true
+    daemon_reload: true

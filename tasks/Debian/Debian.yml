@@ -1,0 +1,40 @@
+---
+
+- name: Install required packages on Debian based systems
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - software-properties-common
+    install_recommends: false
+    update_cache: true
+    state: present
+
+- name: Install HAProxy
+  block:
+    - name: Install HAProxy | Download GPG key
+      ansible.builtin.get_url:
+        url: "https://haproxy.debian.net/bernat.debian.org.gpg"
+        dest: /usr/share/keyrings/haproxy.debian.net
+        owner: root
+        group: root
+        mode: "0644"
+    - name: Install HAProxy | Import GPG key
+      ansible.builtin.apt_key:
+        file: /usr/share/keyrings/haproxy.debian.net
+        state: present
+    - name: Install HAProxy | Add HAProxy repository
+      ansible.builtin.apt_repository:
+        filename: haproxy
+        repo: "deb [signed-by=/usr/share/keyrings/haproxy.debian.net] http://haproxy.debian.net bookworm-backports-{{ haproxy_version }} main"
+        state: present
+    - name: Install HAProxy | Install packages
+      ansible.builtin.apt:
+        name: "haproxy={{ haproxy_version }}.*"
+        update_cache: true
+        state: present
+
+- name: Start & enable HAProxy service
+  ansible.builtin.service:
+    name: haproxy.service
+    state: started
+    enabled: true
